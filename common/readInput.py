@@ -14,6 +14,7 @@ class InputReader():
             self.high = int(self.cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
         elif inputStream[0:4] == 'rtsp':
             self.inputType = 'rtsp'
+            # self.inputStream = inputStream
             cap = cv2.VideoCapture(inputStream)
             fpsGoal = cap.get(cv2.CAP_PROP_FPS)
             self.fps = fpsGoal
@@ -32,13 +33,29 @@ class InputReader():
             self.fps = self.cap.get(cv2.CAP_PROP_FPS)
             self.width = int(self.cap.get(cv2.CAP_PROP_FRAME_WIDTH))
             self.high = int(self.cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+        elif os.path.isdir(inputStream):
+            self.inputType = 'dir'
+            self.cap = None
+            self.fps = None
+            self.width = None
+            self.high = None
+            files = os.listdir(inputStream)
+            self.imgPaths = []
+            for filename in files:
+                filePath = inputStream + '/' + filename
+                if filePath.endswith(('.jpg', '.png')):
+                    self.imgPaths.append(filePath)
+            self.imgNum = len(self.imgPaths)
+            self.index = 0
         else:
             raise BaseException('wrong input:' + inputStream)
         self.noneFrameNum = 0
 
+
     def read(self):
         bStop = False
         if self.inputType == 'rtsp':
+            # print(self.inputStream)
             timeNow = time.time()
             deltaTime = self.timeDeltaGoal - (timeNow - self.lastFrameTime)
             # print('timeNow', timeNow, 'lastFrameTime', self.lastFrameTime, 'deltaTime', deltaTime)
@@ -69,6 +86,23 @@ class InputReader():
             else:
                 self.noneFrameNum = 0
             return frame, bStop
+        elif self.inputType == 'dir':
+            if self.index >= self.imgNum:
+                frame = None
+                bStop = True
+                return frame, bStop
+            frame = cv2.imread(self.imgPaths[self.index])
+            self.index += 1
+            bStop = False
+            return frame, bStop
+
+    def getImgPath(self):
+        '''
+        get last read img name
+        '''
+        index = self.index - 1 # img name of last read
+        imgPath = self.imgPaths[index]
+        return imgPath
 
     def getFPS(self):
         return self.fps

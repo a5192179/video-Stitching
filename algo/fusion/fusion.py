@@ -171,10 +171,132 @@ class ImgFusioner:
         color = (0, 0, 255)
         thickness = 2
         blank = cv2.circle(blank, center, radius, color, thickness)
-        cv2.imshow('img', cv2.resize(img, (int(img.shape[1] * 0.6), int(img.shape[0] * 0.6))))
-        cv2.imshow('cylinder', cv2.resize(blank, (int(blank.shape[1] * 0.6), int(blank.shape[0] * 0.6))))
-        cv2.waitKey(0)
+        # cv2.imshow('img', cv2.resize(img, (int(img.shape[1] * 0.6), int(img.shape[0] * 0.6))))
+        # cv2.imshow('cylinder', cv2.resize(blank, (int(blank.shape[1] * 0.6), int(blank.shape[0] * 0.6))))
+        # cv2.waitKey(0)
         return blank
+
+    def fusionByAffine(self, imgNew, imgTurn):
+        '''
+        生成一张大图，类似3*3，其中中间是imgNew，四角是imgTurn，其他部位可以根据hNew + 2 * hTurn, wNew + 2 * wTurn推测
+        以imgNew为基准，先把imgTurn放到background的 hTurn wTurn （左上角）位置
+        用wrap affine 转换 background
+        把imgNew放到background
+        剔除额外的边界
+        '''
+        hNew, wNew = imgNew.shape[:2]
+        hTurn, wTurn = imgTurn.shape[:2]
+        # 1.prepare a big picture
+        background = np.zeros((hNew + 2 * hTurn, wNew + 2 * wTurn, 3), dtype='uint8')
+        # 2.turn img
+        if len(self.HList) < self.count + 1:
+            print('count:', self.count, 'generate data')
+            background[hTurn:hTurn + hTurn, wTurn:wTurn + wTurn, :] = imgTurn
+            temp = np.zeros((hNew + 2 * hTurn, wNew + 2 * wTurn, 3), dtype='uint8') # 对 imgNew 也要进行扩张，计算的H是相对imgNew的形状，如果不扩张，扩张后的imgTurn，原点还是对应扩张前imgNew的原点
+            temp[hTurn:hTurn + hNew, wTurn:wTurn + wNew, :] = imgNew
+            # 模块一：提取特征
+            kpsNew, featuresNew = detect(temp)
+            kpsTurn, featuresTurn = detect(background)
+            # cv2.imshow('img_left', img_left)
+            # cv2.imshow('img_right', img_right)
+            # cv2.waitKey(2000)
+
+            # 模块二：特征匹配
+            matches, H, good = match_keypoints(kpsNew,kpsTurn,featuresNew,featuresTurn,0.5,0.99)
+            print('matches:', len(matches))
+            # ============================
+            # img = cv2.drawMatchesKnn(imgNew,kpsNew,background,kpsTurn,good,None,flags=cv2.DrawMatchesFlags_NOT_DRAW_SINGLE_POINTS)
+            # cv2.imshow('IMG', (cv2.resize(img, (int(img.shape[1] * 0.3), int(img.shape[0] * 0.3)))))
+            # cv2.waitKey(0)
+            # plt.figure(figsize=(20,20))
+            # plt.imshow(cv2.resize(img, (int(img.shape[1] * 0.6), int(img.shape[0] * 0.6))))
+            # ============================
+            # 模块三：透视变换-拼接
+            self.HList.append(H)
+            # cv2.imshow('background0', cv2.resize(background, (int(background.shape[1] * 0.6), int(background.shape[0] * 0.6))))
+            background = cv2.warpPerspective(background, H, (background.shape[1], background.shape[0])) #注意，这里的形状参数是（列，行）
+            # cv2.imshow('background1', cv2.resize(temp, (int(temp.shape[1] * 0.6), int(temp.shape[0] * 0.6))))
+            # cv2.waitKey(0)
+
+            # topLeft 
+            u = wTurn
+            v = hTurn
+            topLeftV = (H[1, 0] * u + H[1, 1] * v + H[1, 2]) / (H[2, 0] * u + H[2, 1] * v + H[2, 2]) #https://docs.opencv.org/master/da/d54/group__imgproc__transform.html#gab75ef31ce5cdfb5c44b6da5f3b908ea4
+            topLeftU = (H[0, 0] * u + H[0, 1] * v + H[0, 2]) / (H[2, 0] * u + H[2, 1] * v + H[2, 2])
+
+            # topRight
+            u = wTurn + wTurn
+            v = hTurn
+            topRightV = (H[1, 0] * u + H[1, 1] * v + H[1, 2]) / (H[2, 0] * u + H[2, 1] * v + H[2, 2])
+            topRightU = (H[0, 0] * u + H[0, 1] * v + H[0, 2]) / (H[2, 0] * u + H[2, 1] * v + H[2, 2])
+
+            # buttomLeft 
+            u = wTurn
+            v = hTurn + hTurn
+            buttomLeftV = (H[1, 0] * u + H[1, 1] * v + H[1, 2]) / (H[2, 0] * u + H[2, 1] * v + H[2, 2])
+            buttomLeftU = (H[0, 0] * u + H[0, 1] * v + H[0, 2]) / (H[2, 0] * u + H[2, 1] * v + H[2, 2])
+
+            # buttomRight 
+            u = wTurn + wTurn
+            v = hTurn + hTurn
+            buttomRightV = (H[1, 0] * u + H[1, 1] * v + H[1, 2]) / (H[2, 0] * u + H[2, 1] * v + H[2, 2])
+            buttomRightU = (H[0, 0] * u + H[0, 1] * v + H[0, 2]) / (H[2, 0] * u + H[2, 1] * v + H[2, 2])
+
+            # topLeftNew
+            topLeftNewV = hTurn
+            topLeftNewU = wTurn
+
+            # topRightNew
+            topRightNewV = hTurn
+            topRightNewU = wTurn + wTurn
+
+            # buttomLeftNew
+            buttomLeftNewV = hTurn + hTurn
+            buttomLeftNewU = wTurn
+
+            # buttomRightNew
+            buttomRightNewV = hTurn + hTurn
+            buttomRightNewU = wTurn + wTurn
+
+            top = min(topLeftV, topRightV, buttomLeftV, buttomRightV, topLeftNewV, topRightNewV, buttomLeftNewV, buttomRightNewV)
+            top = max(0, top)
+            buttom = max(topLeftV, topRightV, buttomLeftV, buttomRightV, topLeftNewV, topRightNewV, buttomLeftNewV, buttomRightNewV)
+            buttom = min(hNew + 2 * hTurn, buttom)
+            left = min(topLeftU, topRightU, buttomLeftU, buttomRightU, topLeftNewU, topRightNewU, buttomLeftNewU, buttomRightNewU)
+            left = max(0, left)
+            right = max(topLeftU, topRightU, buttomLeftU, buttomRightU, topLeftNewU, topRightNewU, buttomLeftNewU, buttomRightNewU)
+            right = min(wNew + 2 * wTurn, right)
+
+            self.topList.append(int(top))
+            self.buttomList.append(int(buttom))
+            self.leftList.append(int(left))
+            self.rightList.append(int(right))
+
+        else:
+            print('count:', self.count, 'use existing data')
+            H = self.HList[self.count]
+            background[hTurn:hTurn + hTurn, wTurn:wTurn + wTurn, :] = imgTurn
+            background = cv2.warpPerspective(background, H, (background.shape[1], background.shape[0]))
+
+        background[hTurn:hTurn + hNew, wTurn:wTurn + wNew, :] = imgNew
+        # plt.figure()
+        # plt.imshow(background)
+        # plt.show()
+        # 4.cut img border
+        background = background[self.topList[self.count]:self.buttomList[self.count], self.leftList[self.count]:self.rightList[self.count], :]
+        # plt.figure()
+        # plt.imshow(background)
+        # plt.show()
+
+        if self.count < self.imgNum - 2:
+            self.count += 1
+        else:
+            if self.centerU == -1:
+                self.centerU = int((2 * wTurn + wNew) / 2 - self.leftList[self.count])
+                self.centerV = int((2 * hTurn + hNew) / 2 - self.topList[self.count])
+            self.count = 0
+
+        return background
 
     def fusion(self, imgNew, imgTurn):
         hNew, wNew = imgNew.shape[:2]
@@ -257,6 +379,8 @@ class ImgFusioner:
                         continue
                     background[newV, newU, :] = imgTurn[v, u, :]
             print('time:', time.time() - ts)
+        # cv2.imshow('background0', cv2.resize(background, (int(background.shape[1] * 0.6), int(background.shape[0] * 0.6))))
+        # cv2.waitKey(0)
         # 3.put new img
         background[hTurn:hTurn + hNew, wTurn:wTurn + wNew, :] = imgNew
         # plt.figure()
@@ -281,8 +405,18 @@ class ImgFusioner:
     def fusionMulImg(self, imgList):
         turnImg = imgList[0]
         for i in range(len(imgList) - 1):
-            turnImg = self.fusion(imgList[i + 1], turnImg)
+            # turnImg = self.fusion(imgList[i + 1], turnImg)
+            turnImg = self.fusionByAffine(imgList[i + 1], turnImg)
+            # print('turnImg shape:', turnImg.shape)
+            # cv2.imshow('turnImg', cv2.resize(turnImg, (int(turnImg.shape[1] * 0.6), int(turnImg.shape[0] * 0.6))))
+            # cv2.waitKey(0)
+        cv2.imshow('turnImg1', cv2.resize(turnImg, (int(turnImg.shape[1] * 0.6), int(turnImg.shape[0] * 0.6))))
+        # cv2.waitKey(0)
+        # cv2.destroyAllWindows()
         turnImg = self.projectToCylinder(turnImg, 79/180 * math.pi, self.centerU, self.centerV)
+        cv2.imshow('turnImg2', cv2.resize(turnImg, (int(turnImg.shape[1] * 0.6), int(turnImg.shape[0] * 0.6))))
+        cv2.waitKey(0)
+        cv2.destroyAllWindows()
         return turnImg
 
 def drawMatches(img_left, img_right, H):
@@ -366,7 +500,7 @@ def fusionMulImg(imgList, HList = []):
 #         for i in range(len(imgList) - 1):
             
 if __name__ == "__main__":
-    suffix = 'un_diff_corner_mul3_cylinder'
+    suffix = 'un_diff_corner_mul3_affine'
     videoList = ['D:/project/videoFusion/data/2020122914/video/un20201229140.mp4','D:/project/videoFusion/data/2020122912/video/un20201229120.mp4','D:/project/videoFusion/data/2020122911/video/un20201229110.mp4']
     readers = []
     for video in videoList:
@@ -375,7 +509,7 @@ if __name__ == "__main__":
     videoSavePath = '../output'
     imgFusioner = ImgFusioner(len(videoList))
     frameID = 0
-    while frameID < 10:
+    while frameID < 30:
         imgList = []
         for reader in readers:
             frame, bStop = reader.read()
@@ -401,6 +535,7 @@ if __name__ == "__main__":
 #     cv2.imshow('pano', pano)
 #     cv2.waitKey(0)
 #     return pano
+
 
 # if __name__ == "__main__":
 #     suffix = 'un_indoor_4_opencv'
