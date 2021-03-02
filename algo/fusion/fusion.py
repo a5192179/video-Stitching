@@ -140,37 +140,49 @@ class ImgFusioner:
         self.count = 0
         self.centerU = -1
         self.centerV = -1
+        self.cylinderReady = False
+        self.remapIndexX = 0
+        self.remapIndexY = 0
+        self.center = 0
 
     def projectToCylinder(self, img, theta, center_x = -1, center_y = -1) :
         '''
         theta is fov, unit is rad
         '''
-        rows = img.shape[0]
-        cols = img.shape[1]
-        
-        f = cols / (2 * math.tan(theta / 2))
-        
         blank = np.zeros_like(img)
-        if center_x == -1:
-            center_x = int(cols / 2)
-            center_y = int(rows / 2)
-        
-        for  y in range(rows):
-            for x in range(cols):
-                theta = math.atan((x- center_x )/ f)
-                point_x = int(f * math.tan( (x-center_x) / f) + center_x)
-                # point_y = int( (y-center_y) / math.cos(theta) + center_y)
-                point_y = y
-                
-                if point_x >= cols or point_x < 0 or point_y >= rows or point_y < 0:
-                    pass
-                else:
-                    blank[y , x, :] = img[point_y , point_x ,:]
-        center = (center_x, center_y)
+        if not self.cylinderReady:
+            rows = img.shape[0]
+            cols = img.shape[1]
+            self.remapIndexX = np.zeros([rows, cols], dtype='float32')
+            self.remapIndexY = np.zeros([rows, cols], dtype='float32')
+            
+            f = cols / (2 * math.tan(theta / 2))
+            
+            if center_x == -1:
+                center_x = int(cols / 2)
+                center_y = int(rows / 2)
+            self.center = (center_x, center_y)
+
+            for  y in range(rows):
+                for x in range(cols):
+                    theta = math.atan((x- center_x )/ f)
+                    point_x = int(f * math.tan( (x-center_x) / f) + center_x)
+                    point_y = int( (y-center_y) / math.cos(theta) + center_y)
+                    # point_y = y
+                    
+                    # if point_x >= cols or point_x < 0 or point_y >= rows or point_y < 0:
+                    #     pass
+                    # else:
+                    #     blank[y , x, :] = img[point_y , point_x ,:]
+                    self.remapIndexX[y, x] = float(point_x)
+                    self.remapIndexY[y, x] = float(point_y)
+            self.cylinderReady = True
+                    
+        blank = cv2.remap(img, self.remapIndexX, self.remapIndexY, cv2.INTER_LINEAR)
         radius = 10
         color = (0, 0, 255)
         thickness = 2
-        blank = cv2.circle(blank, center, radius, color, thickness)
+        blank = cv2.circle(blank, self.center, radius, color, thickness)
         # cv2.imshow('img', cv2.resize(img, (int(img.shape[1] * 0.6), int(img.shape[0] * 0.6))))
         # cv2.imshow('cylinder', cv2.resize(blank, (int(blank.shape[1] * 0.6), int(blank.shape[0] * 0.6))))
         # cv2.waitKey(0)
@@ -410,13 +422,13 @@ class ImgFusioner:
             # print('turnImg shape:', turnImg.shape)
             # cv2.imshow('turnImg', cv2.resize(turnImg, (int(turnImg.shape[1] * 0.6), int(turnImg.shape[0] * 0.6))))
             # cv2.waitKey(0)
-        cv2.imshow('turnImg1', cv2.resize(turnImg, (int(turnImg.shape[1] * 0.6), int(turnImg.shape[0] * 0.6))))
+        # cv2.imshow('turnImg1', cv2.resize(turnImg, (int(turnImg.shape[1] * 0.6), int(turnImg.shape[0] * 0.6))))
         # cv2.waitKey(0)
         # cv2.destroyAllWindows()
         turnImg = self.projectToCylinder(turnImg, 79/180 * math.pi, self.centerU, self.centerV)
-        cv2.imshow('turnImg2', cv2.resize(turnImg, (int(turnImg.shape[1] * 0.6), int(turnImg.shape[0] * 0.6))))
-        cv2.waitKey(0)
-        cv2.destroyAllWindows()
+        # cv2.imshow('turnImg2', cv2.resize(turnImg, (int(turnImg.shape[1] * 0.6), int(turnImg.shape[0] * 0.6))))
+        # cv2.waitKey(0)
+        # cv2.destroyAllWindows()
         return turnImg
 
 def drawMatches(img_left, img_right, H):
@@ -500,7 +512,7 @@ def fusionMulImg(imgList, HList = []):
 #         for i in range(len(imgList) - 1):
             
 if __name__ == "__main__":
-    suffix = 'un_diff_corner_mul3_affine'
+    suffix = 'un_diff_corner_mul3_affine_remap'
     videoList = ['D:/project/videoFusion/data/2020122914/video/un20201229140.mp4','D:/project/videoFusion/data/2020122912/video/un20201229120.mp4','D:/project/videoFusion/data/2020122911/video/un20201229110.mp4']
     readers = []
     for video in videoList:
@@ -509,7 +521,7 @@ if __name__ == "__main__":
     videoSavePath = '../output'
     imgFusioner = ImgFusioner(len(videoList))
     frameID = 0
-    while frameID < 30:
+    while frameID < 60:
         imgList = []
         for reader in readers:
             frame, bStop = reader.read()
