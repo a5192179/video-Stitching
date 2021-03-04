@@ -173,7 +173,7 @@ class ImgFusioner:
                     # if point_x >= cols or point_x < 0 or point_y >= rows or point_y < 0:
                     #     pass
                     # else:
-                    #     blank[y , x, :] = img[point_y , point_x ,:]
+                    #     blank[y , x, :] = img[point_y , point_x ,:] !!!
                     self.remapIndexX[y, x] = float(point_x)
                     self.remapIndexY[y, x] = float(point_y)
             self.cylinderReady = True
@@ -260,15 +260,15 @@ class ImgFusioner:
 
             # topRightNew
             topRightNewV = hTurn
-            topRightNewU = wTurn + wTurn
+            topRightNewU = wTurn + wNew
 
             # buttomLeftNew
-            buttomLeftNewV = hTurn + hTurn
+            buttomLeftNewV = hTurn + hNew
             buttomLeftNewU = wTurn
 
             # buttomRightNew
-            buttomRightNewV = hTurn + hTurn
-            buttomRightNewU = wTurn + wTurn
+            buttomRightNewV = hTurn + hNew
+            buttomRightNewU = wTurn + wNew
 
             top = min(topLeftV, topRightV, buttomLeftV, buttomRightV, topLeftNewV, topRightNewV, buttomLeftNewV, buttomRightNewV)
             top = max(0, top)
@@ -290,12 +290,21 @@ class ImgFusioner:
             background[hTurn:hTurn + hTurn, wTurn:wTurn + wTurn, :] = imgTurn
             background = cv2.warpPerspective(background, H, (background.shape[1], background.shape[0]))
 
-        background[hTurn:hTurn + hNew, wTurn:wTurn + wNew, :] = imgNew
+        temp = np.zeros((hNew + 2 * hTurn, wNew + 2 * wTurn, 3), dtype='uint8') # 对 imgNew 也要进行扩张，计算的H是相对imgNew的形状，如果不扩张，扩张后的imgTurn，原点还是对应扩张前imgNew的原点
+        temp[hTurn:hTurn + hNew, wTurn:wTurn + wNew, :] = imgNew
+        # cv2.imshow('temp', cv2.resize(temp, (int(temp.shape[1] * 0.3), int(temp.shape[0] * 0.3))))
+        background[temp>0] = temp[temp>0]
+        # cv2.imshow('background1', cv2.resize(background, (int(background.shape[1] * 0.3), int(background.shape[0] * 0.3))))
+        # cv2.waitKey(0)
+        # cv2.destroyAllWindows()
         # plt.figure()
         # plt.imshow(background)
         # plt.show()
         # 4.cut img border
         background = background[self.topList[self.count]:self.buttomList[self.count], self.leftList[self.count]:self.rightList[self.count], :]
+        # cv2.imshow('background2', cv2.resize(background, (int(background.shape[1] * 0.3), int(background.shape[0] * 0.3))))
+        # cv2.waitKey(0)
+        # cv2.destroyAllWindows()
         # plt.figure()
         # plt.imshow(background)
         # plt.show()
@@ -414,22 +423,22 @@ class ImgFusioner:
             self.count = 0
         return background
 
-    def fusionMulImg(self, imgList):
-        turnImg = imgList[0]
+    def fusionMulImg(self, imgList, dealOrder):
+        baseImg = imgList[dealOrder[0]]
         for i in range(len(imgList) - 1):
             # turnImg = self.fusion(imgList[i + 1], turnImg)
-            turnImg = self.fusionByAffine(imgList[i + 1], turnImg)
+            baseImg = self.fusionByAffine(baseImg, imgList[dealOrder[i + 1]])
             # print('turnImg shape:', turnImg.shape)
             # cv2.imshow('turnImg', cv2.resize(turnImg, (int(turnImg.shape[1] * 0.6), int(turnImg.shape[0] * 0.6))))
             # cv2.waitKey(0)
         # cv2.imshow('turnImg1', cv2.resize(turnImg, (int(turnImg.shape[1] * 0.6), int(turnImg.shape[0] * 0.6))))
         # cv2.waitKey(0)
         # cv2.destroyAllWindows()
-        turnImg = self.projectToCylinder(turnImg, 79/180 * math.pi, self.centerU, self.centerV)
+        baseImg = self.projectToCylinder(baseImg, 79/180 * math.pi, self.centerU, self.centerV)
         # cv2.imshow('turnImg2', cv2.resize(turnImg, (int(turnImg.shape[1] * 0.6), int(turnImg.shape[0] * 0.6))))
         # cv2.waitKey(0)
         # cv2.destroyAllWindows()
-        return turnImg
+        return baseImg
 
 def drawMatches(img_left, img_right, H):
     # 获取图片宽度和高度
@@ -512,8 +521,10 @@ def fusionMulImg(imgList, HList = []):
 #         for i in range(len(imgList) - 1):
             
 if __name__ == "__main__":
-    suffix = 'un_diff_corner_mul3_affine_remap'
+    suffix = 'un_diff_corner_mul3_affine_remap_center'
     videoList = ['D:/project/videoFusion/data/2020122914/video/un20201229140.mp4','D:/project/videoFusion/data/2020122912/video/un20201229120.mp4','D:/project/videoFusion/data/2020122911/video/un20201229110.mp4']
+    dealOrder = [1,0,2]
+
     readers = []
     for video in videoList:
         readers.append(readInput.InputReader(video))
@@ -527,7 +538,7 @@ if __name__ == "__main__":
             frame, bStop = reader.read()
             frame = cv2.resize(frame, (int(frame.shape[1]*0.6), int(frame.shape[0]*0.6)))
             imgList.append(frame)
-        img = imgFusioner.fusionMulImg(imgList)
+        img = imgFusioner.fusionMulImg(imgList, dealOrder)
         if frameID == 0:
             imgSize = (img.shape[1], img.shape[0])
             fourcc = cv2.VideoWriter_fourcc('m', 'p', '4', 'v')
