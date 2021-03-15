@@ -7,6 +7,8 @@ from common import readInput
 import datetime
 import time
 
+from tool.streamAndID import IDManager
+
 def initFolder(saveFolder):
     if not os.path.exists(saveFolder):
         os.mkdir(saveFolder)
@@ -16,16 +18,17 @@ def initFolder(saveFolder):
 
 if __name__ == "__main__":
     # 0/init
-    # inputStreams = ['rtsp://admin:1234abcd@192.168.1.132:554/Streaming/Channels/1',
-    #                 'rtsp://admin:1234abcd@192.168.1.41:554/Streaming/Channels/1'
-    #                 ]
+    inputStreams = ['rtsp://admin:1234abcd@192.168.1.132:554/Streaming/Channels/1',
+                    'rtsp://admin:1234abcd@192.168.1.41:554/Streaming/Channels/1',
+                    'rtsp://admin:1234abcd@192.168.1.100:554/Streaming/Channels/1'
+                    ]
     # inputStreams = ['rtsp://admin:1234abcd@192.168.1.101:554/Streaming/Channels/1',
     #                 'rtsp://admin:1234abcd@192.168.1.102:554/Streaming/Channels/1'
     #                 ]
     # inputStreams = ['0',
     #                 ]
-    inputStreams = ['rtsp://admin:1234abcd@192.168.1.132:554/Streaming/Channels/1']
-    sub = '20210121025'
+    # inputStreams = ['rtsp://admin:1234abcd@192.168.1.132:554/Streaming/Channels/1']
+    sub = '2021031503'
     # inputStream = '0'
     saveFolder = '../data/' + sub
     initFolder(saveFolder)
@@ -34,10 +37,13 @@ if __name__ == "__main__":
     videoSavePath = saveFolder + '/video'
     initFolder(videoSavePath)
 
+    idmanager = IDManager()
+
     readers = []
     videoID = 0
     videoOuts = []
     for inputStream in inputStreams:
+        cameraID = idmanager.stream2ID(inputStream)
         inputReader = readInput.InputReader(inputStream)
         fps = inputReader.getFPS()
         # countFrame = -1
@@ -47,13 +53,13 @@ if __name__ == "__main__":
         imgSize = (widthSave, highSave)
         fourcc = cv2.VideoWriter_fourcc('m', 'p', '4', 'v')
         videoOut = cv2.VideoWriter()
-        videoOut.open(videoSavePath + '/' + sub + str(videoID) + '.mp4', fourcc, fps, imgSize, True)
+        videoOut.open(videoSavePath + '/' + cameraID + '-' + str(videoID) + '.mp4', fourcc, fps, imgSize, True)
         readers.append(inputReader)
         videoOuts.append(videoOut)
         videoID += 1
 
     frameID = 0
-    while frameID < 500:
+    while frameID < 1000:
         videoID = 0
         for inputReader in readers:
             # 1/read camera every second
@@ -62,7 +68,7 @@ if __name__ == "__main__":
             if bStop:
                 break
             frame = frameOri[int((high - highSave) / 2):high - int((high - highSave) / 2),int((width - widthSave) / 2):width - int((width - widthSave) / 2),:]
-            cv2.imwrite(imgSavePath + '/' + str(videoID) + '-' + str(frameID) + '.jpg', frame)
+            # cv2.imwrite(imgSavePath + '/' + str(videoID) + '-' + str(frameID) + '.jpg', frame)
             videoOut.write(frame)
             videoID += 1
         frameID += 1

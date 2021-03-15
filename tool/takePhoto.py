@@ -18,13 +18,13 @@ if __name__ == "__main__":
     # 0/init
     # inputStream = 'rtsp://admin:1234abcd@192.168.1.132:554/Streaming/Channels/1'
     # inputStream = '0'
-    # inputStream = 'rtsp://admin:1234abcd@192.168.1.101:554/Streaming/Channels/1'
-    inputStream = 'rtsp://admin:1234abcd@192.168.1.132:554/Streaming/Channels/1'
-    sub = '132'
+    inputStream = 'rtsp://admin:1234abcd@192.168.1.41:554/Streaming/Channels/1'
+    # inputStream = 'rtsp://admin:1234abcd@192.168.1.132:554/Streaming/Channels/1'
+    sub = 'E61605517-41'
     # inputStream = '0'
     saveFolder = '../data/Photo'
     initFolder(saveFolder)
-    imgSavePath = saveFolder + '/wild2'
+    imgSavePath = saveFolder + '/cali/' + sub
     initFolder(imgSavePath)
     # videoSavePath = saveFolder + '/video'
     # initFolder(videoSavePath)

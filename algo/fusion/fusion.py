@@ -138,6 +138,7 @@ class ImgFusioner:
         self.leftList = []
         self.rightList = []
         self.count = 0
+        self.FirstLoop = True
         self.centerU = -1
         self.centerV = -1
         self.cylinderReady = False
@@ -157,6 +158,7 @@ class ImgFusioner:
             self.remapIndexY = np.zeros([rows, cols], dtype='float32')
             
             f = cols / (2 * math.tan(theta / 2))
+            # !!! the original is : f = cols / (2 * math.tan(theta / 8))
             
             if center_x == -1:
                 center_x = int(cols / 2)
@@ -217,9 +219,10 @@ class ImgFusioner:
             matches, H, good = match_keypoints(kpsNew,kpsTurn,featuresNew,featuresTurn,0.5,0.99)
             print('matches:', len(matches))
             # ============================
-            # img = cv2.drawMatchesKnn(imgNew,kpsNew,background,kpsTurn,good,None,flags=cv2.DrawMatchesFlags_NOT_DRAW_SINGLE_POINTS)
-            # cv2.imshow('IMG', (cv2.resize(img, (int(img.shape[1] * 0.3), int(img.shape[0] * 0.3)))))
-            # cv2.waitKey(0)
+            img = cv2.drawMatchesKnn(temp,kpsNew,background,kpsTurn,good,None,flags=cv2.DrawMatchesFlags_NOT_DRAW_SINGLE_POINTS)
+            cv2.imshow('IMG', (cv2.resize(img, (int(img.shape[1] * 0.3), int(img.shape[0] * 0.3)))))
+            cv2.waitKey(0)
+            cv2.destroyAllWindows()
             # plt.figure(figsize=(20,20))
             # plt.imshow(cv2.resize(img, (int(img.shape[1] * 0.6), int(img.shape[0] * 0.6))))
             # ============================
@@ -310,11 +313,45 @@ class ImgFusioner:
         # plt.show()
 
         if self.count < self.imgNum - 2:
+            if self.FirstLoop:
+                if self.count == 0:
+                    self.centerU = int((2 * wTurn + wNew) / 2)
+                    self.centerV = int((2 * hTurn + hNew) / 2)
+                    self.centerU -= self.leftList[self.count]
+                    self.centerV -= self.topList[self.count]
+                else:
+                    self.centerU += wTurn
+                    self.centerV += hTurn
+                    self.centerU -= self.leftList[self.count]
+                    self.centerV -= self.topList[self.count]
+                # radius = 10
+                # color = (0, 255, 255)
+                # thickness = 2
+                # blank = cv2.circle(background, (self.centerU, self.centerV), radius, color, thickness)
+                # cv2.imshow('blank', cv2.resize(blank, (int(blank.shape[1] * 0.3), int(blank.shape[0] * 0.3))))
+                # cv2.waitKey(0)
+                # cv2.destroyAllWindows()
             self.count += 1
         else:
-            if self.centerU == -1:
-                self.centerU = int((2 * wTurn + wNew) / 2 - self.leftList[self.count])
-                self.centerV = int((2 * hTurn + hNew) / 2 - self.topList[self.count])
+            if self.FirstLoop:
+                if self.count == 0:
+                    self.centerU = int((2 * wTurn + wNew) / 2)
+                    self.centerV = int((2 * hTurn + hNew) / 2)
+                    self.centerU -= self.leftList[self.count]
+                    self.centerV -= self.topList[self.count]
+                else:
+                    self.centerU += wTurn
+                    self.centerV += hTurn
+                    self.centerU -= self.leftList[self.count]
+                    self.centerV -= self.topList[self.count]
+                # radius = 10
+                # color = (0, 255, 255)
+                # thickness = 2
+                # blank = cv2.circle(background, (self.centerU, self.centerV), radius, color, thickness)
+                # cv2.imshow('blank', cv2.resize(blank, (int(blank.shape[1] * 0.3), int(blank.shape[0] * 0.3))))
+                # cv2.waitKey(0)
+                # cv2.destroyAllWindows()
+            self.FirstLoop = False
             self.count = 0
 
         return background
@@ -521,9 +558,11 @@ def fusionMulImg(imgList, HList = []):
 #         for i in range(len(imgList) - 1):
             
 if __name__ == "__main__":
-    suffix = 'un_diff_corner_mul3_affine_remap_center'
-    videoList = ['D:/project/videoFusion/data/2020122914/video/un20201229140.mp4','D:/project/videoFusion/data/2020122912/video/un20201229120.mp4','D:/project/videoFusion/data/2020122911/video/un20201229110.mp4']
-    dealOrder = [1,0,2]
+    suffix = '2021031501Test'
+    # videoList = ['D:/project/videoFusion/data/2020122914/video/un20201229140.mp4','D:/project/videoFusion/data/2020122912/video/un20201229120.mp4','D:/project/videoFusion/data/2020122911/video/un20201229110.mp4']
+    # dealOrder = [1,0,2]
+    videoList = ['D:/project/videoFusion/data/2021031501/video/unE61605546-132-0.mp4','D:/project/videoFusion/data/2021031501/video/unE61605498-101-2.mp4','D:/project/videoFusion/data/2021031501/video/unE61605517-41-1.mp4']
+    dealOrder = [2,1,0]
 
     readers = []
     for video in videoList:
@@ -532,7 +571,7 @@ if __name__ == "__main__":
     videoSavePath = '../output'
     imgFusioner = ImgFusioner(len(videoList))
     frameID = 0
-    while frameID < 60:
+    while frameID < 100:
         imgList = []
         for reader in readers:
             frame, bStop = reader.read()

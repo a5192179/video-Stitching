@@ -16,8 +16,15 @@ def initFolder(saveFolder):
         os.mkdir(saveFolder)
 
 if __name__ == "__main__":
-    caliImgFolder = '../data/Photo/cali'
-    cameraID = '132'
+    # inputStreams = ['D:/project/videoFusion/data/2021031501/video/E61605546-132-0.mp4']
+    # inputStreams = ['D:/project/videoFusion/data/2021031501/video/E61605498-101-2.mp4']
+    inputStreams = ['D:/project/videoFusion/data/2021031501/video/E61605517-41-1.mp4']
+
+    # caliImgFolder = '../data/Photo/cali/E61605546-132'
+    # caliImgFolder = '../data/Photo/cali/E61605498-101'
+    caliImgFolder = '../data/Photo/cali/E61605517-41'
+
+    cameraID = caliImgFolder.split('/')[-1]
     loadFile = caliImgFolder + '/cameraMatrix' + cameraID + '.txt'
     with open(loadFile, 'rb') as f:
         matrix = pickle.load(f)
@@ -33,9 +40,9 @@ if __name__ == "__main__":
     #                 ]
     # inputStreams = ['D:/project/videoFusion/data/2020122902/video/20201229020.mp4'
     #                 ]
-    inputStreams = ['D:/project/videoFusion/data/20210121025/video/202101210250.mp4'
-                    ]
-    inputStreams = ['D:/project/videoFusion/data/Photo/wide2']
+    # inputStreams = ['D:/project/videoFusion/data/20210121025/video/202101210250.mp4'
+    #                 ]
+    # inputStreams = ['D:/project/videoFusion/data/Photo/wide2']
     for inputStream in inputStreams:
         #img folder
         if os.path.isdir(inputStream):

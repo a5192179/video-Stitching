@@ -51,15 +51,15 @@ def calibration(fileNameTemp, corner_height:int, corner_width:int, square_size:f
     print("dist:\n", dist)  # 畸变系数   distortion cofficients = (k_1,k_2,p_1,p_2,k_3)
     print("rvecs:\n", rvecs)  # 旋转向量  # 外参数
     print("tvecs:\n", tvecs ) # 平移向量  # 外参数
-    # img = cv2.undistort(chess_img, matrix, dist)
-    # img = cv2.resize(img, (int(img.shape[1] * 0.6), int(img.shape[0] * 0.6)))
-    # cv2.imshow('img', img)
-    # cv2.waitKey(0)
+    img = cv2.undistort(chess_img, matrix, dist)
+    img = cv2.resize(img, (int(img.shape[1] * 0.6), int(img.shape[0] * 0.6)))
+    cv2.imshow('img', img)
+    cv2.waitKey(0)
     return ret, matrix, dist, rvecs, tvecs
 
 if __name__ == "__main__":
-    caliImgFolder = '../data/Photo/cali'
-    cameraID = '132'
+    caliImgFolder = '../data/Photo/cali/E61605498-101'
+    cameraID = 'E61605498-101'
     fileNameTemp = caliImgFolder + '/*.jpg'
     corner_height = 6
     corner_width = 9
