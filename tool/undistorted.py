@@ -16,9 +16,9 @@ def initFolder(saveFolder):
         os.mkdir(saveFolder)
 
 if __name__ == "__main__":
-    # inputStreams = ['D:/project/videoFusion/data/2021031501/video/E61605546-132-0.mp4']
-    # inputStreams = ['D:/project/videoFusion/data/2021031501/video/E61605498-101-2.mp4']
-    inputStreams = ['D:/project/videoFusion/data/2021031501/video/E61605517-41-1.mp4']
+    # inputStreams = ['D:/project/videoFusion/data/2021031503/video/E61605546-132-0.mp4']
+    # inputStreams = ['D:/project/videoFusion/data/2021031503/video/E61605498-101-2.mp4']
+    inputStreams = ['D:/project/videoFusion/data/2021031503/video/E61605517-41-1.mp4']
 
     # caliImgFolder = '../data/Photo/cali/E61605546-132'
     # caliImgFolder = '../data/Photo/cali/E61605498-101'
@@ -82,10 +82,11 @@ if __name__ == "__main__":
         videoOut = cv2.VideoWriter()
         videoOut.open(videoSavePath, fourcc, fps, imgSize, True)
         frameID = 0
-        while frameID < 500:
+        bStop = False
+        while not bStop:
             videoID = 0
             frameOri, bStop = inputReader.read()
-            if bStop:
+            if bStop or frameOri is None:
                 break
             frame = cv2.undistort(frameOri, matrix, dist)
             videoOut.write(frame)

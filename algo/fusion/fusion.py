@@ -558,10 +558,10 @@ def fusionMulImg(imgList, HList = []):
 #         for i in range(len(imgList) - 1):
             
 if __name__ == "__main__":
-    suffix = '2021031501Test'
+    suffix = '2021031503'
     # videoList = ['D:/project/videoFusion/data/2020122914/video/un20201229140.mp4','D:/project/videoFusion/data/2020122912/video/un20201229120.mp4','D:/project/videoFusion/data/2020122911/video/un20201229110.mp4']
     # dealOrder = [1,0,2]
-    videoList = ['D:/project/videoFusion/data/2021031501/video/unE61605546-132-0.mp4','D:/project/videoFusion/data/2021031501/video/unE61605498-101-2.mp4','D:/project/videoFusion/data/2021031501/video/unE61605517-41-1.mp4']
+    videoList = ['D:/project/videoFusion/data/2021031503/video/unE61605546-132-0.mp4','D:/project/videoFusion/data/2021031503/video/unE61605498-101-2.mp4','D:/project/videoFusion/data/2021031503/video/unE61605517-41-1.mp4']
     dealOrder = [2,1,0]
 
     readers = []
@@ -571,7 +571,7 @@ if __name__ == "__main__":
     videoSavePath = '../output'
     imgFusioner = ImgFusioner(len(videoList))
     frameID = 0
-    while frameID < 100:
+    while frameID < 900:
         imgList = []
         for reader in readers:
             frame, bStop = reader.read()
